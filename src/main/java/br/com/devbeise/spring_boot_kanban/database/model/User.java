@@ -1,9 +1,7 @@
 package br.com.devbeise.spring_boot_kanban.database.model;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -11,16 +9,25 @@ import java.time.LocalDateTime;
 @Setter
 @ToString
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity
+@Table(name = "users")
 public class User {
-    private Long id;
-    private String name;
-    private String email;
-    private String password;
-    private LocalDateTime lastLoginAt;
 
-    public User(String name, String email, String password) {
-        this.name = name;
-        this.email = email;
-        this.password = password;
-    }
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Column(name = "email", nullable = false)
+    private String email;
+
+    @Column(name = "password", nullable = true)
+    private String password;
+
+    @Column(name = "last_login_at", nullable = true)
+    private LocalDateTime lastLoginAt;
 }

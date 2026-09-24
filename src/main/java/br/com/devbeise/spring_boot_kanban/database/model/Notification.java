@@ -1,9 +1,7 @@
 package br.com.devbeise.spring_boot_kanban.database.model;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -11,15 +9,30 @@ import java.time.LocalDateTime;
 @Setter
 @ToString
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity
+@Table(name = "notification")
 public class Notification {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "message", nullable = false)
     private String message;
+
+    @Column(name = "is_read", nullable = false)
     private Boolean isRead;
+
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public Notification(String message, Boolean isRead, LocalDateTime createdAt) {
-        this.message = message;
-        this.isRead = isRead;
-        this.createdAt = createdAt;
-    }
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "task_id")
+    private Task task;
 }

@@ -1,23 +1,32 @@
 package br.com.devbeise.spring_boot_kanban.database.model;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Getter
 @Setter
 @ToString
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity
+@Table(name = "task")
 public class Task {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "title", nullable = false)
     private String title;
+
+    @Column(name = "description", nullable = true)
     private String description;
+
+    @Column(name = "status", nullable = false)
     private String status;
 
-    public Task(String title, String description, String status) {
-        this.title = title;
-        this.description = description;
-        this.status = status;
-    }
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 }

@@ -5,9 +5,11 @@ import br.com.devbeise.spring_boot_kanban.database.model.User;
 import br.com.devbeise.spring_boot_kanban.database.repository.TaskRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.UserRepository;
 import br.com.devbeise.spring_boot_kanban.dto.TaskDto;
+import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.devbeise.spring_boot_kanban.mapper.TaskMapper;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,7 +24,7 @@ public class TaskService {
     @Transactional
     public TaskDto createTask(TaskDto dto) {
         User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         Task task = Task.builder()
                 .title(dto.getTitle())
@@ -31,31 +33,22 @@ public class TaskService {
                 .user(user)
                 .build();
 
-        return convertToDto(taskRepository.save(task));
+        return TaskMapper.toDto(taskRepository.save(task));
     }
 
     @Transactional
     public TaskDto updateStatus(Long taskId, String status) {
         Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Tarefa não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Tarefa não encontrada."));
         task.setStatus(status);
-        return convertToDto(taskRepository.save(task));
+        return TaskMapper.toDto(taskRepository.save(task));
     }
 
     @Transactional(readOnly = true)
     public List<TaskDto> getTasksByUserIdAndStatus(Long userId, String status) {
         return taskRepository.findAllByUserIdAndStatus(userId, status).stream()
-                .map(this::convertToDto)
+                .map(TaskMapper::toDto)
                 .collect(Collectors.toList());
     }
-
-    private TaskDto convertToDto(Task task) {
-        return TaskDto.builder()
-                .id(task.getId())
-                .title(task.getTitle())
-                .description(task.getDescription())
-                .status(task.getStatus())
-                .userId(task.getUser().getId())
-                .build();
-    }
+    
 }

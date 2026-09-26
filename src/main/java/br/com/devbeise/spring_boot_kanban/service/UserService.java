@@ -6,6 +6,9 @@ import br.com.devbeise.spring_boot_kanban.dto.UserDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.devbeise.spring_boot_kanban.exception.DuplicateResourceException;
+import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
+import br.com.devbeise.spring_boot_kanban.mapper.UserMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,44 +23,34 @@ public class UserService {
     @Transactional
     public UserDto register(UserDto dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("E-mail já cadastrado.");
+            throw new DuplicateResourceException("E-mail já cadastrado.");
         }
         User user = User.builder()
                 .name(dto.getName())
                 .email(dto.getEmail())
                 .password(dto.getPassword())
                 .build();
-        return convertToDto(userRepository.save(user));
+        return UserMapper.toDto(userRepository.save(user));
     }
 
     @Transactional(readOnly = true)
     public UserDto findById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
-        return convertToDto(user);
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+        return UserMapper.toDto(user);
     }
 
     @Transactional(readOnly = true)
     public List<UserDto> findByName(String name) {
         return userRepository.findAllByName(name).stream()
-                .map(this::convertToDto)
+                .map(UserMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public void updateLoginTimestamp(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+    public void updateLoginTimestamp(User user) {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
     }
-
-    private UserDto convertToDto(User user) {
-        return UserDto.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .lastLoginAt(user.getLastLoginAt())
-                .build();
-    }
+    
 }

@@ -14,10 +14,10 @@ public class TeamMemberDto {
 
     private Long id;
 
-    @NotNull(message = "O ID do usuário membro é obrigatório.")
+    @NotNull(message = "{teammember.userId.required}")
     private Long userId;
 
-    @NotNull(message = "O ID do time é obrigatório.")
+    @NotNull(message = "{teammember.teamId.required}")
     private Long teamId;
 
     private LocalDateTime joinedAt;

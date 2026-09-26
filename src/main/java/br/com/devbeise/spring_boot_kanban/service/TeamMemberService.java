@@ -10,6 +10,9 @@ import br.com.devbeise.spring_boot_kanban.dto.TeamMemberDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.devbeise.spring_boot_kanban.exception.DuplicateResourceException;
+import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
+import br.com.devbeise.spring_boot_kanban.mapper.TeamMemberMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,13 +29,13 @@ public class TeamMemberService {
     @Transactional
     public TeamMemberDto addMember(TeamMemberDto dto) {
         if (teamMemberRepository.existsByTeamIdAndUserId(dto.getTeamId(), dto.getUserId())) {
-            throw new RuntimeException("Usuário já é membro deste time.");
+            throw new DuplicateResourceException("Usuário já é membro deste time.");
         }
 
         Team team = teamRepository.findById(dto.getTeamId())
-                .orElseThrow(() -> new RuntimeException("Time não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Time não encontrado."));
         User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         TeamMember member = TeamMember.builder()
                 .team(team)
@@ -40,22 +43,14 @@ public class TeamMemberService {
                 .joinedAt(LocalDateTime.now())
                 .build();
 
-        return convertToDto(teamMemberRepository.save(member));
+        return TeamMemberMapper.toDto(teamMemberRepository.save(member));
     }
 
     @Transactional(readOnly = true)
     public List<TeamMemberDto> listMembersByTeam(Long teamId) {
         return teamMemberRepository.findAllByTeamId(teamId).stream()
-                .map(this::convertToDto)
+                .map(TeamMemberMapper::toDto)
                 .collect(Collectors.toList());
     }
-
-    private TeamMemberDto convertToDto(TeamMember member) {
-        return TeamMemberDto.builder()
-                .id(member.getId())
-                .teamId(member.getTeam().getId())
-                .userId(member.getUser().getId())
-                .joinedAt(member.getJoinedAt())
-                .build();
-    }
+    
 }

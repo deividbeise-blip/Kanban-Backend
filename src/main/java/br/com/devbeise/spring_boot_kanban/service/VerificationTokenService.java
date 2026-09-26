@@ -8,6 +8,9 @@ import br.com.devbeise.spring_boot_kanban.dto.VerificationTokenDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
+import br.com.devbeise.spring_boot_kanban.exception.InvalidTokenException;
+import br.com.devbeise.spring_boot_kanban.mapper.VerificationTokenMapper;
 
 import java.time.LocalDateTime;
 
@@ -24,7 +27,7 @@ public class VerificationTokenService {
     @Transactional
     public VerificationTokenDto createToken(VerificationTokenDto dto) {
         User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         // Remove apenas tokens antigos do MESMO tipo, sem afetar outros fluxos
         // (ex: gerar um código de 2FA não apaga um token de reset de senha pendente).
@@ -41,28 +44,17 @@ public class VerificationTokenService {
                 .expiresAt(expiration)
                 .build();
 
-        return convertToDto(tokenRepository.save(verificationToken));
+        return VerificationTokenMapper.toDto(tokenRepository.save(verificationToken));
     }
 
     @Transactional
     public void validate(String token) {
         VerificationToken verificationToken = tokenRepository
                 .findByTokenAndUsedFalseAndExpiresAtAfter(token, LocalDateTime.now())
-                .orElseThrow(() -> new RuntimeException("Token inválido ou expirado."));
+                .orElseThrow(() -> new InvalidTokenException("Token inválido ou expirado."));
 
         verificationToken.setUsed(true);
         tokenRepository.save(verificationToken);
     }
-
-    private VerificationTokenDto convertToDto(VerificationToken token) {
-        return VerificationTokenDto.builder()
-                .id(token.getId())
-                .userId(token.getUser().getId())
-                .token(token.getToken())
-                .type(token.getType())
-                .expiresAt(token.getExpiresAt())
-                .used(token.getUsed())
-                .createdAt(token.getCreatedAt())
-                .build();
-    }
+    
 }

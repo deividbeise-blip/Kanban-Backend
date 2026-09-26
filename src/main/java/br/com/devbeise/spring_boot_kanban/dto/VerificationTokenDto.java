@@ -15,13 +15,13 @@ public class VerificationTokenDto {
 
     private Long id;
 
-    @NotNull(message = "O ID do usuário é obrigatório.")
+    @NotNull(message = "{verificationtoken.userId.required}")
     private Long userId;
 
-    @NotBlank(message = "O token é obrigatório.")
+    @NotBlank(message = "{verificationtoken.token.required}")
     private String token;
 
-    @NotBlank(message = "O tipo do token é obrigatório.")
+    @NotBlank(message = "{verificationtoken.type.required}")
     private String type;
 
     private LocalDateTime expiresAt;

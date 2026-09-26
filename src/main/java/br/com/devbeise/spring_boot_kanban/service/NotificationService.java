@@ -7,9 +7,11 @@ import br.com.devbeise.spring_boot_kanban.database.repository.NotificationReposi
 import br.com.devbeise.spring_boot_kanban.database.repository.TaskRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.UserRepository;
 import br.com.devbeise.spring_boot_kanban.dto.NotificationDto;
+import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.devbeise.spring_boot_kanban.mapper.NotificationMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,7 +28,7 @@ public class NotificationService {
     @Transactional
     public NotificationDto createNotification(NotificationDto dto) {
         User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         Task task = null;
         if (dto.getTaskId() != null) {
@@ -41,24 +43,14 @@ public class NotificationService {
                 .task(task)
                 .build();
 
-        return convertToDto(notificationRepository.save(notification));
+        return NotificationMapper.toDto(notificationRepository.save(notification));
     }
 
     @Transactional(readOnly = true)
     public List<NotificationDto> getNotificationsByUser(Long userId, Boolean isRead) {
         return notificationRepository.findAllByUserIdAndIsRead(userId, isRead).stream()
-                .map(this::convertToDto)
+                .map(NotificationMapper::toDto)
                 .collect(Collectors.toList());
     }
-
-    private NotificationDto convertToDto(Notification notification) {
-        return NotificationDto.builder()
-                .id(notification.getId())
-                .message(notification.getMessage())
-                .isRead(notification.getIsRead())
-                .createdAt(notification.getCreatedAt())
-                .userId(notification.getUser().getId())
-                .taskId(notification.getTask() != null ? notification.getTask().getId() : null)
-                .build();
-    }
+    
 }

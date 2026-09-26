@@ -13,14 +13,14 @@ public class TaskDto {
 
     private Long id;
 
-    @NotBlank(message = "O título da tarefa é obrigatório.")
+    @NotBlank(message = "{task.title.required}")
     private String title;
 
     private String description;
 
-    @NotBlank(message = "O status (coluna do Kanban) é obrigatório.")
+    @NotBlank(message = "{task.status.required}")
     private String status;
 
-    @NotNull(message = "O ID do usuário responsável pela tarefa é obrigatório.")
+    @NotNull(message = "{task.userId.required}")
     private Long userId;
 }

@@ -15,11 +15,11 @@ public class UserDto {
 
     private Long id;
 
-    @NotBlank(message = "O nome é obrigatório.")
+    @NotBlank(message = "{user.name.required}")
     private String name;
 
-    @NotBlank(message = "O e-mail é obrigatório.")
-    @Email(message = "O e-mail informado deve ser válido.")
+    @NotBlank(message = "{user.email.required}")
+    @Email(message = "{user.email.invalid}")
     private String email;
 
 

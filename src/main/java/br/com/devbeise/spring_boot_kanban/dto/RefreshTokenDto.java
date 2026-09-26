@@ -15,10 +15,10 @@ public class RefreshTokenDto {
 
     private Long id;
 
-    @NotNull(message = "O ID do usuário é obrigatório.")
+    @NotNull(message = "{refreshtoken.userId.required}")
     private Long userId;
 
-    @NotBlank(message = "O token é obrigatório.")
+    @NotBlank(message = "{refreshtoken.token.required}")
     private String token;
 
     private LocalDateTime expiresAt;

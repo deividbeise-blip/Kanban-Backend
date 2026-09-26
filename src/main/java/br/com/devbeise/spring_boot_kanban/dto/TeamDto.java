@@ -13,11 +13,11 @@ public class TeamDto {
 
     private Long id;
 
-    @NotBlank(message = "O nome do time é obrigatório.")
+    @NotBlank(message = "{team.name.required}")
     private String name;
 
     private String inviteToken;
 
-    @NotNull(message = "O ID do master (dono do time) é obrigatório.")
+    @NotNull(message = "{team.masterId.required}")
     private Long masterId;
 }

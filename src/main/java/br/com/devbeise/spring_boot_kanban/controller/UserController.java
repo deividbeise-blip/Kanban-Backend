@@ -32,9 +32,5 @@ public class UserController {
         return ResponseEntity.ok(userService.findByName(name));
     }
 
-    @PatchMapping("/{id}/login-timestamp")
-    public ResponseEntity<Void> updateLoginTimestamp(@PathVariable Long id) {
-        userService.updateLoginTimestamp(id);
-        return ResponseEntity.noContent().build();
-    }
 }
+

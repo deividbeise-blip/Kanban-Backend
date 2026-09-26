@@ -11,16 +11,12 @@ import java.util.Optional;
 public interface TeamRepository extends JpaRepository<Team, Long> {
 
     List<Team> findAllByName(String name);
-
-
+    
     Optional<Team> findByInviteToken(String inviteToken);
-
 
     boolean existsByInviteToken(String inviteToken);
 
-
     List<Team> findAllByMasterId(Long masterId);
-
 
     boolean existsByIdAndMasterId(Long teamId, Long masterId);
 }

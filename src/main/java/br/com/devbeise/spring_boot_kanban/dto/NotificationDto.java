@@ -15,7 +15,7 @@ public class NotificationDto {
 
     private Long id;
 
-    @NotBlank(message = "A mensagem da notificação não pode estar vazia.")
+    @NotBlank(message = "{notification.message.required}")
     private String message;
 
 
@@ -23,7 +23,7 @@ public class NotificationDto {
 
     private LocalDateTime createdAt;
 
-    @NotNull(message = "O ID do usuário associado à notificação é obrigatório.")
+    @NotNull(message = "{notification.userId.required}")
     private Long userId;
 
     private Long taskId;

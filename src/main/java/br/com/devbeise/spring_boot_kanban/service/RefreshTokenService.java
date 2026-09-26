@@ -5,9 +5,11 @@ import br.com.devbeise.spring_boot_kanban.database.model.User;
 import br.com.devbeise.spring_boot_kanban.database.repository.RefreshTokenRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.UserRepository;
 import br.com.devbeise.spring_boot_kanban.dto.RefreshTokenDto;
+import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.devbeise.spring_boot_kanban.mapper.RefreshTokenMapper;
 
 import java.time.LocalDateTime;
 
@@ -21,7 +23,7 @@ public class RefreshTokenService {
     @Transactional
     public RefreshTokenDto createToken(RefreshTokenDto dto) {
         User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         // Não removemos os tokens antigos do usuário aqui: cada dispositivo/sessão
         // mantém seu próprio refresh token, permitindo login simultâneo em vários lugares.
@@ -31,25 +33,15 @@ public class RefreshTokenService {
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .build();
 
-        return convertToDto(refreshTokenRepository.save(refreshToken));
+        return RefreshTokenMapper.toDto(refreshTokenRepository.save(refreshToken));
     }
 
     @Transactional
     public void logout(String token) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Token não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Token não encontrado."));
         refreshToken.setRevoked(true);
         refreshTokenRepository.save(refreshToken);
     }
-
-    private RefreshTokenDto convertToDto(RefreshToken token) {
-        return RefreshTokenDto.builder()
-                .id(token.getId())
-                .userId(token.getUser().getId())
-                .token(token.getToken())
-                .expiresAt(token.getExpiresAt())
-                .revoked(token.getRevoked())
-                .createdAt(token.getCreatedAt())
-                .build();
-    }
+    
 }

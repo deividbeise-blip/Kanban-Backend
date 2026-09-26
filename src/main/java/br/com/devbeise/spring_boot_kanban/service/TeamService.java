@@ -10,6 +10,8 @@ import br.com.devbeise.spring_boot_kanban.dto.TeamDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
+import br.com.devbeise.spring_boot_kanban.mapper.TeamMapper;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -25,7 +27,7 @@ public class TeamService {
     @Transactional
     public TeamDto createTeam(TeamDto dto) {
         User master = userRepository.findById(dto.getMasterId())
-                .orElseThrow(() -> new RuntimeException("Usuário master não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário master não encontrado."));
 
         Team team = Team.builder()
                 .name(dto.getName())
@@ -42,22 +44,14 @@ public class TeamService {
                 .build();
         teamMemberRepository.save(masterMembership);
 
-        return convertToDto(savedTeam);
+        return TeamMapper.toDto(savedTeam);
     }
 
     @Transactional(readOnly = true)
     public TeamDto findByInviteToken(String token) {
         Team team = teamRepository.findByInviteToken(token)
-                .orElseThrow(() -> new RuntimeException("Time não encontrado com este token."));
-        return convertToDto(team);
+                .orElseThrow(() -> new ResourceNotFoundException("Time não encontrado com este token."));
+        return TeamMapper.toDto(team);
     }
-
-    private TeamDto convertToDto(Team team) {
-        return TeamDto.builder()
-                .id(team.getId())
-                .name(team.getName())
-                .inviteToken(team.getInviteToken())
-                .masterId(team.getMaster().getId())
-                .build();
-    }
+    
 }

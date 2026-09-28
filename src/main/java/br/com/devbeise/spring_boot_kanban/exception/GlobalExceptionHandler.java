@@ -57,4 +57,9 @@ public class GlobalExceptionHandler {
         body.put("message", message);
         return body;
     }
+
+    @ExceptionHandler(AccessDeniedBusinessException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedBusinessException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
 }

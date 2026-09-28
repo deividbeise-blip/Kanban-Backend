@@ -23,4 +23,7 @@ public class TaskDto {
 
     @NotNull(message = "{task.userId.required}")
     private Long userId;
+
+    @NotNull(message = "{task.teamId.required}")
+    private Long teamId;
 }

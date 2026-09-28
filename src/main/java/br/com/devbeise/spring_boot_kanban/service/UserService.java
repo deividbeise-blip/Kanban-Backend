@@ -3,12 +3,13 @@ package br.com.devbeise.spring_boot_kanban.service;
 import br.com.devbeise.spring_boot_kanban.database.model.User;
 import br.com.devbeise.spring_boot_kanban.database.repository.UserRepository;
 import br.com.devbeise.spring_boot_kanban.dto.UserDto;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import br.com.devbeise.spring_boot_kanban.exception.DuplicateResourceException;
 import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
 import br.com.devbeise.spring_boot_kanban.mapper.UserMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserDto register(UserDto dto) {
@@ -28,7 +30,7 @@ public class UserService {
         User user = User.builder()
                 .name(dto.getName())
                 .email(dto.getEmail())
-                .password(dto.getPassword())
+                .password(passwordEncoder.encode(dto.getPassword()))
                 .build();
         return UserMapper.toDto(userRepository.save(user));
     }
@@ -52,5 +54,4 @@ public class UserService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
     }
-    
 }

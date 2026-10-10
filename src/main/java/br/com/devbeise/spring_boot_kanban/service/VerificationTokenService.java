@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 
 @Service
@@ -20,6 +22,7 @@ public class VerificationTokenService {
 
     private static final String TYPE_TWO_FACTOR = "TWO_FACTOR";
     private static final int MAX_ATTEMPTS = 5;
+    private static final String INVALID_CODE_MESSAGE = "Código inválido ou expirado.";
 
     private final VerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
@@ -45,17 +48,32 @@ public class VerificationTokenService {
         return VerificationTokenMapper.toDto(tokenRepository.save(verificationToken));
     }
 
-    @Transactional
-    public void validate(String token) {
+    // noRollbackFor é essencial: sem ele, a exceção desfaz a transação
+    // e o incremento de "attempts" nunca chega ao banco.
+    @Transactional(noRollbackFor = InvalidTokenException.class)
+    public void validate(Long userId, String type, String code) {
         VerificationToken verificationToken = tokenRepository
-                .findByTokenAndUsedFalseAndExpiresAtAfter(token, LocalDateTime.now())
-                .orElseThrow(() -> new InvalidTokenException("Token inválido ou expirado."));
+                .findFirstByUserIdAndTypeAndUsedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
+                        userId, type, LocalDateTime.now())
+                .orElseThrow(() -> new InvalidTokenException(INVALID_CODE_MESSAGE));
 
-        if (verificationToken.getAttempts() >= MAX_ATTEMPTS) {
-            throw new InvalidTokenException("Número máximo de tentativas excedido. Solicite um novo código.");
+        // Comparação em tempo constante (evita ataque de timing)
+        boolean matches = code != null && MessageDigest.isEqual(
+                verificationToken.getToken().getBytes(StandardCharsets.UTF_8),
+                code.getBytes(StandardCharsets.UTF_8));
+
+        if (!matches) {
+            int attempts = verificationToken.getAttempts() + 1;
+            verificationToken.setAttempts(attempts);
+
+            if (attempts >= MAX_ATTEMPTS) {
+                verificationToken.setUsed(true); // queima o código: precisa pedir outro
+            }
+
+            tokenRepository.save(verificationToken);
+            throw new InvalidTokenException(INVALID_CODE_MESSAGE);
         }
 
-        verificationToken.setAttempts(verificationToken.getAttempts() + 1);
         verificationToken.setUsed(true);
         tokenRepository.save(verificationToken);
     }

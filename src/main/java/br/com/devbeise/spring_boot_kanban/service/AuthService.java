@@ -13,8 +13,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +23,10 @@ public class AuthService {
     private static final String TYPE_TWO_FACTOR = "TWO_FACTOR";
     private static final String GENERIC_LOGIN_ERROR = "Email ou senha incorretos.";
     private static final String INVALID_REFRESH_ERROR = "Refresh token inválido ou expirado.";
+    private static final String INVALID_CODE_ERROR = "Código inválido ou expirado.";
     private static final int TWO_FACTOR_INTERVAL_DAYS = 3;
+    private static final int CODE_BOUND = 1_000_000;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
@@ -39,6 +42,8 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
         } catch (AuthenticationException e) {
+            // Mensagem genérica de propósito: não revelar se o problema foi
+            // "email não encontrado" ou "senha incorreta" (evita enumeração de usuários).
             throw new InvalidCredentialsException(GENERIC_LOGIN_ERROR);
         }
 
@@ -67,12 +72,14 @@ public class AuthService {
         return issueTokens(user);
     }
 
-    @Transactional
+    // Sem @Transactional aqui de propósito: se a transação do AuthService envolvesse
+    // o validate, uma exceção marcaria tudo como rollback-only e o contador de
+    // tentativas erradas não seria gravado.
     public LoginResponseDto verifyTwoFactor(TwoFactorVerifyDto request) {
-        verificationTokenService.validate(request.getCode());
-
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new InvalidCredentialsException(GENERIC_LOGIN_ERROR));
+                .orElseThrow(() -> new InvalidTokenException(INVALID_CODE_ERROR));
+
+        verificationTokenService.validate(user.getId(), TYPE_TWO_FACTOR, request.getCode());
 
         return issueTokens(user);
     }
@@ -116,7 +123,8 @@ public class AuthService {
                 .build();
     }
 
+    // SecureRandom (imprevisível) e %06d (permite zeros à esquerda, cobre 000000 a 999999).
     private String generateCode() {
-        return String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
+        return String.format("%06d", SECURE_RANDOM.nextInt(CODE_BOUND));
     }
 }

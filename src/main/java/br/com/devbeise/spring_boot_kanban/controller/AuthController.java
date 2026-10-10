@@ -2,6 +2,7 @@ package br.com.devbeise.spring_boot_kanban.controller;
 
 import br.com.devbeise.spring_boot_kanban.dto.LoginRequestDto;
 import br.com.devbeise.spring_boot_kanban.dto.LoginResponseDto;
+import br.com.devbeise.spring_boot_kanban.dto.RefreshRequestDto;
 import br.com.devbeise.spring_boot_kanban.dto.TwoFactorVerifyDto;
 import br.com.devbeise.spring_boot_kanban.service.AuthService;
 import jakarta.validation.Valid;
@@ -24,5 +25,10 @@ public class AuthController {
     @PostMapping("/verify-2fa")
     public ResponseEntity<LoginResponseDto> verifyTwoFactor(@RequestBody @Valid TwoFactorVerifyDto dto) {
         return ResponseEntity.ok(authService.verifyTwoFactor(dto));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponseDto> refresh(@RequestBody @Valid RefreshRequestDto dto) {
+        return ResponseEntity.ok(authService.refresh(dto));
     }
 }

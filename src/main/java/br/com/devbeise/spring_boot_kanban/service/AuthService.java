@@ -4,15 +4,16 @@ import br.com.devbeise.spring_boot_kanban.config.TokenProvider;
 import br.com.devbeise.spring_boot_kanban.database.model.User;
 import br.com.devbeise.spring_boot_kanban.database.repository.UserRepository;
 import br.com.devbeise.spring_boot_kanban.dto.*;
-import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
+import br.com.devbeise.spring_boot_kanban.exception.InvalidCredentialsException;
+import br.com.devbeise.spring_boot_kanban.exception.InvalidTokenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -20,28 +21,31 @@ import java.util.concurrent.ThreadLocalRandom;
 public class AuthService {
 
     private static final String TYPE_TWO_FACTOR = "TWO_FACTOR";
+    private static final String GENERIC_LOGIN_ERROR = "Email ou senha incorretos.";
+    private static final String INVALID_REFRESH_ERROR = "Refresh token inválido ou expirado.";
+    private static final int TWO_FACTOR_INTERVAL_DAYS = 3;
 
     private final AuthenticationManager authenticationManager;
     private final TokenProvider tokenProvider;
     private final UserRepository userRepository;
     private final UserService userService;
     private final VerificationTokenService verificationTokenService;
-    private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
 
     @Transactional
     public LoginResponseDto login(LoginRequestDto request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+        } catch (AuthenticationException e) {
+            throw new InvalidCredentialsException(GENERIC_LOGIN_ERROR);
+        }
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+                .orElseThrow(() -> new InvalidCredentialsException(GENERIC_LOGIN_ERROR));
 
-        boolean needsTwoFactor = user.getLastLoginAt() == null
-                || user.getLastLoginAt().isBefore(LocalDateTime.now().minusDays(3));
-
-        if (needsTwoFactor) {
+        if (needsTwoFactor(user)) {
             String code = generateCode();
 
             verificationTokenService.createToken(
@@ -68,27 +72,46 @@ public class AuthService {
         verificationTokenService.validate(request.getCode());
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+                .orElseThrow(() -> new InvalidCredentialsException(GENERIC_LOGIN_ERROR));
 
         return issueTokens(user);
+    }
+
+    @Transactional(readOnly = true)
+    public LoginResponseDto refresh(RefreshRequestDto request) {
+        String refreshToken = request.getRefreshToken();
+
+        if (!tokenProvider.isRefreshTokenValid(refreshToken)) {
+            throw new InvalidTokenException(INVALID_REFRESH_ERROR);
+        }
+
+        User user = userRepository.findByEmail(tokenProvider.getUsername(refreshToken))
+                .orElseThrow(() -> new InvalidTokenException(INVALID_REFRESH_ERROR));
+
+        // Mantém a regra do 2FA: passou de 3 dias sem login, precisa logar de novo.
+        if (needsTwoFactor(user)) {
+            throw new InvalidTokenException(INVALID_REFRESH_ERROR);
+        }
+
+        return LoginResponseDto.builder()
+                .requiresTwoFactor(false)
+                .accessToken(tokenProvider.gerarToken(user.getUsername()))
+                .message("Token renovado com sucesso.")
+                .build();
+    }
+
+    private boolean needsTwoFactor(User user) {
+        return user.getLastLoginAt() == null
+                || user.getLastLoginAt().isBefore(LocalDateTime.now().minusDays(TWO_FACTOR_INTERVAL_DAYS));
     }
 
     private LoginResponseDto issueTokens(User user) {
         userService.updateLoginTimestamp(user);
 
-        String accessToken = tokenProvider.gerarToken(user.getUsername());
-
-        RefreshTokenDto refreshToken = refreshTokenService.createToken(
-                RefreshTokenDto.builder()
-                        .userId(user.getId())
-                        .token(UUID.randomUUID().toString())
-                        .build()
-        );
-
         return LoginResponseDto.builder()
                 .requiresTwoFactor(false)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken.getToken())
+                .accessToken(tokenProvider.gerarToken(user.getUsername()))
+                .refreshToken(tokenProvider.gerarRefreshToken(user.getUsername()))
                 .message("Login realizado com sucesso.")
                 .build();
     }

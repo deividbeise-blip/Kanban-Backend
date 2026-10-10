@@ -5,12 +5,12 @@ import br.com.devbeise.spring_boot_kanban.database.model.VerificationToken;
 import br.com.devbeise.spring_boot_kanban.database.repository.UserRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.VerificationTokenRepository;
 import br.com.devbeise.spring_boot_kanban.dto.VerificationTokenDto;
+import br.com.devbeise.spring_boot_kanban.exception.InvalidTokenException;
+import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
+import br.com.devbeise.spring_boot_kanban.mapper.VerificationTokenMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
-import br.com.devbeise.spring_boot_kanban.exception.InvalidTokenException;
-import br.com.devbeise.spring_boot_kanban.mapper.VerificationTokenMapper;
 
 import java.time.LocalDateTime;
 
@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 public class VerificationTokenService {
 
     private static final String TYPE_TWO_FACTOR = "TWO_FACTOR";
-    private static final String TYPE_PASSWORD_RESET = "PASSWORD_RESET";
+    private static final int MAX_ATTEMPTS = 5;
 
     private final VerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
@@ -29,8 +29,6 @@ public class VerificationTokenService {
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
-        // Remove apenas tokens antigos do MESMO tipo, sem afetar outros fluxos
-        // (ex: gerar um código de 2FA não apaga um token de reset de senha pendente).
         tokenRepository.deleteByUserIdAndType(user.getId(), dto.getType());
 
         LocalDateTime expiration = TYPE_TWO_FACTOR.equals(dto.getType())
@@ -53,8 +51,12 @@ public class VerificationTokenService {
                 .findByTokenAndUsedFalseAndExpiresAtAfter(token, LocalDateTime.now())
                 .orElseThrow(() -> new InvalidTokenException("Token inválido ou expirado."));
 
+        if (verificationToken.getAttempts() >= MAX_ATTEMPTS) {
+            throw new InvalidTokenException("Número máximo de tentativas excedido. Solicite um novo código.");
+        }
+
+        verificationToken.setAttempts(verificationToken.getAttempts() + 1);
         verificationToken.setUsed(true);
         tokenRepository.save(verificationToken);
     }
-    
 }

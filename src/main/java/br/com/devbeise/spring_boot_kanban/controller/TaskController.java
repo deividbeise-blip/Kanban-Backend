@@ -1,6 +1,8 @@
 package br.com.devbeise.spring_boot_kanban.controller;
 
+import br.com.devbeise.spring_boot_kanban.database.model.User;
 import br.com.devbeise.spring_boot_kanban.dto.TaskDto;
+import br.com.devbeise.spring_boot_kanban.exception.AccessDeniedBusinessException;
 import br.com.devbeise.spring_boot_kanban.service.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +10,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -31,11 +40,11 @@ public class TaskController {
     public ResponseEntity<TaskDto> updateStatus(
             @PathVariable Long taskId,
             @RequestParam String status,
-            Authentication authentication) throws AccessDeniedBusinessException {
+            Authentication authentication) {
 
         if (STATUS_DONE.equalsIgnoreCase(status)) {
-            Long userId = authentication.getName() != null
-                    ? ((br.com.devbeise.spring_boot_kanban.database.model.User) authentication.getPrincipal()).getId()
+            Long userId = authentication.getPrincipal() instanceof User user
+                    ? user.getId()
                     : null;
 
             if (!taskService.isMasterOfTask(taskId, userId)) {
@@ -51,10 +60,5 @@ public class TaskController {
             @PathVariable Long userId,
             @RequestParam String status) {
         return ResponseEntity.ok(taskService.getTasksByUserIdAndStatus(userId, status));
-    }
-
-    private class AccessDeniedBusinessException extends Throwable {
-        public AccessDeniedBusinessException(String string) {
-        }
     }
 }

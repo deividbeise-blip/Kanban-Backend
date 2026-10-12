@@ -21,4 +21,8 @@ public class TeamMemberDto {
     private Long teamId;
 
     private LocalDateTime joinedAt;
+
+    private String userName;
+
+    private String userEmail;
 }

@@ -29,6 +29,7 @@ public class User implements UserDetails {
     @Column(name = "email", nullable = false)
     private String email;
 
+    @ToString.Exclude
     @Column(name = "password", nullable = true)
     private String password;
 
@@ -37,12 +38,12 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email; // seu "username" de login é o email, não um campo separado
+        return email;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // sem Role fixa, como conversamos — lista vazia por agora
+        return Collections.emptyList();
     }
 
     @Override

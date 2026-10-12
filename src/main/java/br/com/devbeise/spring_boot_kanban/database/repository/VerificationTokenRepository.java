@@ -5,26 +5,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface VerificationTokenRepository extends JpaRepository<VerificationToken, Long> {
 
-    Optional<VerificationToken> findByToken(String token);
-
-    List<VerificationToken> findAllByType(String type);
-
-    List<VerificationToken> findAllByExpiresAt(LocalDateTime expiresAt);
-
     Optional<VerificationToken> findFirstByUserIdAndTypeAndUsedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
             Long userId, String type, LocalDateTime now);
 
-    List<VerificationToken> findAllByUserIdAndType(Long userId, String type);
-
-    Optional<VerificationToken> findByTokenAndUsedFalseAndExpiresAtAfter(String token, LocalDateTime now);
-
-    void deleteByToken(String token);
+    Optional<VerificationToken> findFirstByUserIdAndTypeOrderByCreatedAtDesc(Long userId, String type);
 
     void deleteByUserIdAndType(Long userId, String type);
 }

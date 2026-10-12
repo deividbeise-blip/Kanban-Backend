@@ -42,8 +42,7 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
         } catch (AuthenticationException e) {
-            // Mensagem genérica de propósito: não revelar se o problema foi
-            // "email não encontrado" ou "senha incorreta" (evita enumeração de usuários).
+
             throw new InvalidCredentialsException(GENERIC_LOGIN_ERROR);
         }
 
@@ -72,9 +71,6 @@ public class AuthService {
         return issueTokens(user);
     }
 
-    // Sem @Transactional aqui de propósito: se a transação do AuthService envolvesse
-    // o validate, uma exceção marcaria tudo como rollback-only e o contador de
-    // tentativas erradas não seria gravado.
     public LoginResponseDto verifyTwoFactor(TwoFactorVerifyDto request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidTokenException(INVALID_CODE_ERROR));
@@ -95,7 +91,6 @@ public class AuthService {
         User user = userRepository.findByEmail(tokenProvider.getUsername(refreshToken))
                 .orElseThrow(() -> new InvalidTokenException(INVALID_REFRESH_ERROR));
 
-        // Mantém a regra do 2FA: passou de 3 dias sem login, precisa logar de novo.
         if (needsTwoFactor(user)) {
             throw new InvalidTokenException(INVALID_REFRESH_ERROR);
         }
@@ -123,7 +118,6 @@ public class AuthService {
                 .build();
     }
 
-    // SecureRandom (imprevisível) e %06d (permite zeros à esquerda, cobre 000000 a 999999).
     private String generateCode() {
         return String.format("%06d", SECURE_RANDOM.nextInt(CODE_BOUND));
     }

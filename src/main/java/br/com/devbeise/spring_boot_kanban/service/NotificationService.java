@@ -52,5 +52,14 @@ public class NotificationService {
                 .map(NotificationMapper::toDto)
                 .collect(Collectors.toList());
     }
-    
+
+    @Transactional
+    public NotificationDto markAsRead(Long notificationId, Long userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .filter(n -> n.getUser().getId().equals(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("Notificação não encontrada."));
+        notification.setIsRead(true);
+        return NotificationMapper.toDto(notificationRepository.save(notification));
+    }
+
 }

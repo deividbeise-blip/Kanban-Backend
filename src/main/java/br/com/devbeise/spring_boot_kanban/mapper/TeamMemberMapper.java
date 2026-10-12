@@ -13,6 +13,8 @@ public class TeamMemberMapper {
                 .id(member.getId())
                 .teamId(member.getTeam().getId())
                 .userId(member.getUser().getId())
+                .userName(member.getUser().getName())
+                .userEmail(member.getUser().getEmail())
                 .joinedAt(member.getJoinedAt())
                 .build();
     }

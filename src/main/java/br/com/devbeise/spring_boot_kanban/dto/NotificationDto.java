@@ -18,7 +18,6 @@ public class NotificationDto {
     @NotBlank(message = "{notification.message.required}")
     private String message;
 
-
     private Boolean isRead;
 
     private LocalDateTime createdAt;

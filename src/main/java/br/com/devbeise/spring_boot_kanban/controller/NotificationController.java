@@ -1,11 +1,11 @@
 package br.com.devbeise.spring_boot_kanban.controller;
 
+import br.com.devbeise.spring_boot_kanban.database.model.User;
 import br.com.devbeise.spring_boot_kanban.dto.NotificationDto;
 import br.com.devbeise.spring_boot_kanban.service.NotificationService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,15 +17,16 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    @PostMapping
-    public ResponseEntity<NotificationDto> createNotification(@RequestBody @Valid NotificationDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(notificationService.createNotification(dto));
+    @GetMapping
+    public ResponseEntity<List<NotificationDto>> myNotifications(
+            @RequestParam(required = false, defaultValue = "false") Boolean isRead,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(notificationService.getNotificationsByUser(user.getId(), isRead));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<NotificationDto>> getNotificationsByUser(
-            @PathVariable Long userId,
-            @RequestParam(required = false, defaultValue = "false") Boolean isRead) {
-        return ResponseEntity.ok(notificationService.getNotificationsByUser(userId, isRead));
+    @PatchMapping("/{id}/read")
+    public ResponseEntity<NotificationDto> markAsRead(@PathVariable Long id,
+                                                      @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(notificationService.markAsRead(id, user.getId()));
     }
 }

@@ -16,15 +16,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findAllByCreatedAt(LocalDateTime createdAt);
 
-
     List<Notification> findAllByUserId(Long userId);
-
 
     List<Notification> findAllByUserIdAndIsRead(Long userId, Boolean isRead);
 
-
     List<Notification> findAllByTaskId(Long taskId);
-
 
     List<Notification> findAllByUserIdAndTaskIdAndIsRead(Long userId, Long taskId, Boolean isRead);
 }

@@ -7,6 +7,7 @@ import br.com.devbeise.spring_boot_kanban.database.repository.VerificationTokenR
 import br.com.devbeise.spring_boot_kanban.dto.VerificationTokenDto;
 import br.com.devbeise.spring_boot_kanban.exception.InvalidTokenException;
 import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
+import br.com.devbeise.spring_boot_kanban.exception.TooManyRequestsException;
 import br.com.devbeise.spring_boot_kanban.mapper.VerificationTokenMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class VerificationTokenService {
 
     private static final String TYPE_TWO_FACTOR = "TWO_FACTOR";
     private static final int MAX_ATTEMPTS = 5;
+    private static final long RESEND_COOLDOWN_SECONDS = 60;
     private static final String INVALID_CODE_MESSAGE = "Código inválido ou expirado.";
 
     private final VerificationTokenRepository tokenRepository;
@@ -31,6 +33,16 @@ public class VerificationTokenService {
     public VerificationTokenDto createToken(VerificationTokenDto dto) {
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        if (TYPE_TWO_FACTOR.equals(dto.getType())) {
+            tokenRepository.findFirstByUserIdAndTypeOrderByCreatedAtDesc(user.getId(), dto.getType())
+                    .filter(last -> last.getCreatedAt()
+                            .isAfter(LocalDateTime.now().minusSeconds(RESEND_COOLDOWN_SECONDS)))
+                    .ifPresent(last -> {
+                        throw new TooManyRequestsException(
+                                "Um código já foi enviado. Aguarde 1 minuto para solicitar outro.");
+                    });
+        }
 
         tokenRepository.deleteByUserIdAndType(user.getId(), dto.getType());
 
@@ -48,8 +60,6 @@ public class VerificationTokenService {
         return VerificationTokenMapper.toDto(tokenRepository.save(verificationToken));
     }
 
-    // noRollbackFor é essencial: sem ele, a exceção desfaz a transação
-    // e o incremento de "attempts" nunca chega ao banco.
     @Transactional(noRollbackFor = InvalidTokenException.class)
     public void validate(Long userId, String type, String code) {
         VerificationToken verificationToken = tokenRepository
@@ -57,7 +67,6 @@ public class VerificationTokenService {
                         userId, type, LocalDateTime.now())
                 .orElseThrow(() -> new InvalidTokenException(INVALID_CODE_MESSAGE));
 
-        // Comparação em tempo constante (evita ataque de timing)
         boolean matches = code != null && MessageDigest.isEqual(
                 verificationToken.getToken().getBytes(StandardCharsets.UTF_8),
                 code.getBytes(StandardCharsets.UTF_8));
@@ -67,7 +76,7 @@ public class VerificationTokenService {
             verificationToken.setAttempts(attempts);
 
             if (attempts >= MAX_ATTEMPTS) {
-                verificationToken.setUsed(true); // queima o código: precisa pedir outro
+                verificationToken.setUsed(true);
             }
 
             tokenRepository.save(verificationToken);

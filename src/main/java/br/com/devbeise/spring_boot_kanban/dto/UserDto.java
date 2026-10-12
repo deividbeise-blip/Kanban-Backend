@@ -22,7 +22,6 @@ public class UserDto {
     @Email(message = "{user.email.invalid}")
     private String email;
 
-
     private String password;
 
     private LocalDateTime lastLoginAt;

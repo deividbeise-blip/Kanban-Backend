@@ -81,6 +81,9 @@ public class SecurityConfiguration {
                                 "/api/auth/login",
                                 "/api/auth/verify-2fa",
                                 "/api/auth/refresh",
+                                "/api/auth/resend-2fa",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password",
                                 "/api/users/register",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"

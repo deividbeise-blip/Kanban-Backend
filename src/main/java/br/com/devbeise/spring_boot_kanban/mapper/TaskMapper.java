@@ -15,6 +15,7 @@ public class TaskMapper {
                 .description(task.getDescription())
                 .status(task.getStatus())
                 .userId(task.getUser() != null ? task.getUser().getId() : null)
+                .userName(task.getUser() != null ? task.getUser().getName() : null)
                 .teamId(task.getTeam() != null ? task.getTeam().getId() : null)
                 .build();
     }

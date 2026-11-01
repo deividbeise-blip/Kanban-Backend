@@ -1,6 +1,7 @@
 package br.com.devbeise.spring_boot_kanban.controller;
 
 import br.com.devbeise.spring_boot_kanban.database.model.User;
+import br.com.devbeise.spring_boot_kanban.dto.AddMemberRequestDto;
 import br.com.devbeise.spring_boot_kanban.dto.TeamMemberDto;
 import br.com.devbeise.spring_boot_kanban.service.TeamMemberService;
 import jakarta.validation.Valid;
@@ -20,7 +21,7 @@ public class TeamMemberController {
     private final TeamMemberService teamMemberService;
 
     @PostMapping
-    public ResponseEntity<TeamMemberDto> addMember(@RequestBody @Valid TeamMemberDto dto,
+    public ResponseEntity<TeamMemberDto> addMember(@RequestBody @Valid AddMemberRequestDto dto,
                                                    @AuthenticationPrincipal User user) {
         return ResponseEntity.status(HttpStatus.CREATED).body(teamMemberService.addMember(dto, user));
     }

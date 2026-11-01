@@ -42,6 +42,12 @@ public class UserService {
     }
 
     @Transactional
+    public void changePassword(User user, String rawPassword) {
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        userRepository.save(user);
+    }
+
+    @Transactional
     public void updateLoginTimestamp(User user) {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);

@@ -25,6 +25,9 @@ public class TaskDto {
     @NotNull(message = "{task.userId.required}")
     private Long userId;
 
+    // Só de resposta: preenchido pelo TaskMapper, ignorado na criação.
+    private String userName;
+
     @NotNull(message = "{task.teamId.required}")
     private Long teamId;
 }

@@ -6,6 +6,8 @@ import br.com.devbeise.spring_boot_kanban.database.model.User;
 import br.com.devbeise.spring_boot_kanban.database.repository.TeamMemberRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.TeamRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.UserRepository;
+import br.com.devbeise.spring_boot_kanban.dto.AddMemberRequestDto;
+import br.com.devbeise.spring_boot_kanban.dto.NotificationDto;
 import br.com.devbeise.spring_boot_kanban.dto.TeamMemberDto;
 import br.com.devbeise.spring_boot_kanban.exception.DuplicateResourceException;
 import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
@@ -25,27 +27,35 @@ public class TeamMemberService {
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
     private final TeamAccessService teamAccessService;
+    private final NotificationService notificationService;
 
     @Transactional
-    public TeamMemberDto addMember(TeamMemberDto dto, User requester) {
+    public TeamMemberDto addMember(AddMemberRequestDto dto, User requester) {
         teamAccessService.requireMaster(dto.getTeamId(), requester.getId());
-
-        if (teamMemberRepository.existsByTeamIdAndUserId(dto.getTeamId(), dto.getUserId())) {
-            throw new DuplicateResourceException("Usuário já é membro deste time.");
-        }
 
         Team team = teamRepository.findById(dto.getTeamId())
                 .orElseThrow(() -> new ResourceNotFoundException("Time não encontrado."));
-        User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+        User user = userRepository.findByEmail(dto.getEmail().trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Nenhum usuário cadastrado com este e-mail."));
 
-        TeamMember member = TeamMember.builder()
+        if (teamMemberRepository.existsByTeamIdAndUserId(team.getId(), user.getId())) {
+            throw new DuplicateResourceException("Usuário já é membro deste time.");
+        }
+
+        TeamMember member = teamMemberRepository.save(TeamMember.builder()
                 .team(team)
                 .user(user)
                 .joinedAt(LocalDateTime.now())
-                .build();
+                .build());
 
-        return TeamMemberMapper.toDto(teamMemberRepository.save(member));
+        notificationService.createNotification(
+                NotificationDto.builder()
+                        .userId(user.getId())
+                        .message("Você foi adicionado à equipe " + team.getName() + ".")
+                        .build()
+        );
+
+        return TeamMemberMapper.toDto(member);
     }
 
     @Transactional(readOnly = true)

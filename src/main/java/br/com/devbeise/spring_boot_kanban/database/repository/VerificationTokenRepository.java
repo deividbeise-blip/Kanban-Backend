@@ -15,5 +15,10 @@ public interface VerificationTokenRepository extends JpaRepository<VerificationT
 
     Optional<VerificationToken> findFirstByUserIdAndTypeOrderByCreatedAtDesc(Long userId, String type);
 
+    Optional<VerificationToken> findFirstByTokenAndTypeAndUsedFalseAndExpiresAtAfter(
+            String token, String type, LocalDateTime now);
+
+    boolean existsByUserIdAndTypeAndUsedFalseAndExpiresAtAfter(Long userId, String type, LocalDateTime now);
+
     void deleteByUserIdAndType(Long userId, String type);
 }

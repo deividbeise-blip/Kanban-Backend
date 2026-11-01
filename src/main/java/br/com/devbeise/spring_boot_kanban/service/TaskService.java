@@ -3,12 +3,14 @@ package br.com.devbeise.spring_boot_kanban.service;
 import br.com.devbeise.spring_boot_kanban.database.model.Task;
 import br.com.devbeise.spring_boot_kanban.database.model.Team;
 import br.com.devbeise.spring_boot_kanban.database.model.User;
+import br.com.devbeise.spring_boot_kanban.database.repository.NotificationRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.TaskRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.TeamMemberRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.TeamRepository;
 import br.com.devbeise.spring_boot_kanban.database.repository.UserRepository;
 import br.com.devbeise.spring_boot_kanban.dto.NotificationDto;
 import br.com.devbeise.spring_boot_kanban.dto.TaskDto;
+import br.com.devbeise.spring_boot_kanban.dto.UpdateTaskRequestDto;
 import br.com.devbeise.spring_boot_kanban.exception.AccessDeniedBusinessException;
 import br.com.devbeise.spring_boot_kanban.exception.ResourceNotFoundException;
 import br.com.devbeise.spring_boot_kanban.mapper.TaskMapper;
@@ -31,6 +33,7 @@ public class TaskService {
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
+    private final NotificationRepository notificationRepository;
     private final TeamAccessService teamAccessService;
     private final NotificationService notificationService;
 
@@ -43,12 +46,7 @@ public class TaskService {
 
         Team team = teamRepository.findById(dto.getTeamId())
                 .orElseThrow(() -> new ResourceNotFoundException("Equipe não encontrada."));
-        User assignee = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
-
-        if (!teamMemberRepository.existsByTeamIdAndUserId(team.getId(), assignee.getId())) {
-            throw new IllegalArgumentException("O responsável precisa ser membro da equipe.");
-        }
+        User assignee = findTeamMember(team.getId(), dto.getUserId());
 
         Task savedTask = taskRepository.save(Task.builder()
                 .title(dto.getTitle())
@@ -58,14 +56,32 @@ public class TaskService {
                 .team(team)
                 .build());
 
-        if (!assignee.getId().equals(requester.getId())) {
-            notificationService.createNotification(
-                    NotificationDto.builder()
-                            .userId(assignee.getId())
-                            .taskId(savedTask.getId())
-                            .message("Uma nova tarefa foi atribuída a você: " + savedTask.getTitle())
-                            .build()
-            );
+        notifyAssignee(savedTask, assignee, requester);
+
+        return TaskMapper.toDto(savedTask);
+    }
+
+    /**
+     * Edita título, descrição e responsável. Status fica no PATCH /status
+     * (regras de movimentação) e a equipe não muda.
+     */
+    @Transactional
+    public TaskDto updateTask(Long taskId, UpdateTaskRequestDto dto, User requester) {
+        Task task = findTask(taskId);
+        Long teamId = teamIdOf(task);
+
+        teamAccessService.requireMaster(teamId, requester.getId());
+
+        User newAssignee = findTeamMember(teamId, dto.getUserId());
+        boolean assigneeChanged = task.getUser() == null || !task.getUser().getId().equals(newAssignee.getId());
+
+        task.setTitle(dto.getTitle());
+        task.setDescription(dto.getDescription());
+        task.setUser(newAssignee);
+        Task savedTask = taskRepository.save(task);
+
+        if (assigneeChanged) {
+            notifyAssignee(savedTask, newAssignee, requester);
         }
 
         return TaskMapper.toDto(savedTask);
@@ -75,13 +91,8 @@ public class TaskService {
     public TaskDto updateStatus(Long taskId, String status, User requester) {
         validateStatus(status);
 
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tarefa não encontrada."));
-
-        if (task.getTeam() == null) {
-            throw new AccessDeniedBusinessException("Tarefa sem equipe associada.");
-        }
-        Long teamId = task.getTeam().getId();
+        Task task = findTask(taskId);
+        Long teamId = teamIdOf(task);
 
         teamAccessService.requireMember(teamId, requester.getId());
 
@@ -91,6 +102,16 @@ public class TaskService {
 
         task.setStatus(status);
         return TaskMapper.toDto(taskRepository.save(task));
+    }
+
+    @Transactional
+    public void deleteTask(Long taskId, User requester) {
+        Task task = findTask(taskId);
+
+        teamAccessService.requireMaster(teamIdOf(task), requester.getId());
+
+        notificationRepository.detachTask(task.getId());
+        taskRepository.delete(task);
     }
 
     @Transactional(readOnly = true)
@@ -105,6 +126,42 @@ public class TaskService {
             tasks = taskRepository.findAllByTeamIdAndStatus(teamId, status);
         }
         return tasks.stream().map(TaskMapper::toDto).toList();
+    }
+
+    private Task findTask(Long taskId) {
+        return taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tarefa não encontrada."));
+    }
+
+    private Long teamIdOf(Task task) {
+        if (task.getTeam() == null) {
+            throw new AccessDeniedBusinessException("Tarefa sem equipe associada.");
+        }
+        return task.getTeam().getId();
+    }
+
+    private User findTeamMember(Long teamId, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        if (!teamMemberRepository.existsByTeamIdAndUserId(teamId, user.getId())) {
+            throw new IllegalArgumentException("O responsável precisa ser membro da equipe.");
+        }
+        return user;
+    }
+
+    // RN10: avisa o responsável, exceto quando o master atribui a task a si mesmo.
+    private void notifyAssignee(Task task, User assignee, User requester) {
+        if (assignee.getId().equals(requester.getId())) {
+            return;
+        }
+        notificationService.createNotification(
+                NotificationDto.builder()
+                        .userId(assignee.getId())
+                        .taskId(task.getId())
+                        .message("Uma nova tarefa foi atribuída a você: " + task.getTitle())
+                        .build()
+        );
     }
 
     private void validateStatus(String status) {

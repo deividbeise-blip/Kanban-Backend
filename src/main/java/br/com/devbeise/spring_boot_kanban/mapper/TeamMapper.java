@@ -12,7 +12,6 @@ public class TeamMapper {
         return TeamDto.builder()
                 .id(team.getId())
                 .name(team.getName())
-                .inviteToken(team.getInviteToken())
                 .masterId(team.getMaster().getId())
                 .build();
     }

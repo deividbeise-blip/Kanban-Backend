@@ -1,7 +1,6 @@
 package br.com.devbeise.spring_boot_kanban.controller;
 
 import br.com.devbeise.spring_boot_kanban.database.model.User;
-import br.com.devbeise.spring_boot_kanban.dto.JoinTeamRequestDto;
 import br.com.devbeise.spring_boot_kanban.dto.TeamDto;
 import br.com.devbeise.spring_boot_kanban.service.TeamService;
 import jakarta.validation.Valid;
@@ -24,12 +23,6 @@ public class TeamController {
     public ResponseEntity<TeamDto> createTeam(@RequestBody @Valid TeamDto dto,
                                               @AuthenticationPrincipal User user) {
         return ResponseEntity.status(HttpStatus.CREATED).body(teamService.createTeam(dto, user));
-    }
-
-    @PostMapping("/join")
-    public ResponseEntity<TeamDto> join(@RequestBody @Valid JoinTeamRequestDto dto,
-                                        @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(teamService.joinByInviteToken(dto.getInviteToken(), user));
     }
 
     @GetMapping("/mine")

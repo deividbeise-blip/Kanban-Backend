@@ -1,12 +1,9 @@
 package br.com.devbeise.spring_boot_kanban.controller;
 
 import br.com.devbeise.spring_boot_kanban.database.model.User;
-import br.com.devbeise.spring_boot_kanban.dto.AddMemberRequestDto;
 import br.com.devbeise.spring_boot_kanban.dto.TeamMemberDto;
 import br.com.devbeise.spring_boot_kanban.service.TeamMemberService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,12 +16,6 @@ import java.util.List;
 public class TeamMemberController {
 
     private final TeamMemberService teamMemberService;
-
-    @PostMapping
-    public ResponseEntity<TeamMemberDto> addMember(@RequestBody @Valid AddMemberRequestDto dto,
-                                                   @AuthenticationPrincipal User user) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(teamMemberService.addMember(dto, user));
-    }
 
     @GetMapping("/team/{teamId}")
     public ResponseEntity<List<TeamMemberDto>> listMembersByTeam(@PathVariable Long teamId,

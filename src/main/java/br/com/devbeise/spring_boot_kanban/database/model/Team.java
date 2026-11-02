@@ -20,9 +20,6 @@ public class Team {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "invite_token", unique = true)
-    private String inviteToken;
-
     @ManyToOne
     @JoinColumn(name = "master_id")
     private User master;

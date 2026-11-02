@@ -17,7 +17,5 @@ public class TeamDto {
     @Size(max = 100, message = "O nome da equipe deve ter no máximo 100 caracteres.")
     private String name;
 
-    private String inviteToken;
-
     private Long masterId;
 }
